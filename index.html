@@ -1,0 +1,124 @@
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Digital Message</title>
+  <link rel="stylesheet" href="index.css" />
+</head>
+
+<body>
+  <main class="container">
+    <h1>Digital Message </h1>
+    <p>Kirim pesan kecil yang akan muncul di layar OLED.</p>
+
+    <form id="loginForm">
+      <h3>Login Pengirim</h3>
+      <input id="email" type="email" placeholder="Email Firebase" required>
+      <input id="password" type="password" placeholder="Password Firebase" required>
+      <button type="submit">Login</button>
+    </form>
+
+    <section id="messageSection" hidden>
+      <h3>Tulis Pesan</h3>
+      <textarea id="message" maxlength="160"
+        placeholder="Tulis pesanmu di sini..." required></textarea>
+      <button id="sendButton">Kirim Pesan</button>
+      <button id="logoutButton" type="button">Logout</button>
+    </section>
+
+    <div id="status">Silakan login terlebih dahulu.</div>
+  </main>
+
+  <script type="module">
+    import { initializeApp } from
+      "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+
+    import {
+      getAuth,
+      signInWithEmailAndPassword,
+      signOut,
+      onAuthStateChanged
+    } from
+      "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+    import {
+      getDatabase,
+      ref,
+      set
+    } from
+      "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyC-eHv8a8OK9qloaEaWxJafdTbeIAkh6HU",
+      authDomain: "digital-message-d4e6f.firebaseapp.com",
+      databaseURL: "https://digital-message-d4e6f-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "digital-message-d4e6f",
+      appId: "1:971240537178:web:b2c67f63b4df44632d2c63"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getDatabase(app);
+
+    const loginForm = document.getElementById("loginForm");
+    const messageSection = document.getElementById("messageSection");
+    const status = document.getElementById("status");
+
+    onAuthStateChanged(auth, (user) => {
+      loginForm.hidden = !!user;
+      messageSection.hidden = !user;
+      status.textContent = user
+        ? "Berhasil login sebagai " + user.email
+        : "Silakan login terlebih dahulu.";
+    });
+
+    loginForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      status.textContent = "Sedang login...";
+
+      try {
+        await signInWithEmailAndPassword(
+          auth,
+          document.getElementById("email").value,
+          document.getElementById("password").value
+        );
+      } catch (error) {
+        status.textContent = "Login gagal: " + error.message;
+      }
+    });
+
+    document.getElementById("sendButton").addEventListener("click", async () => {
+      const text = document.getElementById("message").value.trim();
+      const button = document.getElementById("sendButton");
+
+      if (!text) {
+        status.textContent = "Pesan tidak boleh kosong.";
+        return;
+      }
+
+      button.disabled = true;
+      status.textContent = "Mengirim pesan...";
+
+      try {
+        await set(ref(db, "messages/current"), {
+          text: text,
+          timestamp: Date.now()
+        });
+
+        status.textContent = "Pesan berhasil dikirim! ✉️";
+        document.getElementById("message").value = "";
+      } catch (error) {
+        status.textContent = "Gagal mengirim: " + error.message;
+      } finally {
+        button.disabled = false;
+      }
+    });
+
+    document.getElementById("logoutButton").addEventListener("click", async () => {
+      await signOut(auth);
+    });
+  </script>
+</body>
+</html>
